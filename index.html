@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archat - Global Chat</title>
+    <!-- Tailwind CSS CDN for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome CDN for icons (e.g., users, paper-plane, smile) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* Import the Inter font for a clean, modern look */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Dark purple gradient background as requested */
+            background: linear-gradient(to right, #4B0082, #8A2BE2);
+            color: #E0E0E0; /* Light grey text for contrast */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        /* Styling for the chat messages container to enable scrolling */
+        .chat-container {
+            height: calc(100vh - 180px); /* Adjust based on header/footer and input height */
+            max-height: 800px; /* Maximum height for larger screens */
+            overflow-y: auto; /* Enable vertical scrolling */
+            scroll-behavior: smooth; /* Smooth scrolling to new messages */
+        }
+        /* Custom scrollbar for a themed appearance */
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .chat-container::-webkit-scrollbar-track {
+            background: #333; /* Dark track */
+            border-radius: 10px;
+        }
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #8A2BE2; /* Purple thumb */
+            border-radius: 10px;
+        }
+        .chat-container::-webkit-scrollbar-thumb:hover {
+            background: #9370DB; /* Lighter purple on hover */
+        }
+        /* Overlay styling for username input and online users list */
+        .online-users-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent dark background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* Ensure it's on top */
+        }
+        .online-users-list {
+            background-color: #333; /* Dark background for the list container */
+            padding: 2rem;
+            border-radius: 0.75rem; /* Rounded corners */
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+            color: #E0E0E0; /* Light text */
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <div id="app" class="flex flex-col flex-grow items-center justify-center p-4">
+        <!-- Main Chat Interface Container -->
+        <div class="bg-gray-800 bg-opacity-80 rounded-xl shadow-lg w-full max-w-4xl flex flex-col p-6 min-h-[70vh]">
+            <!-- Header Section -->
+            <div class="flex justify-between items-center pb-4 border-b border-gray-700 mb-4">
+                <h1 class="text-3xl font-bold text-purple-400">Archat</h1>
+                <div class="flex items-center space-x-4">
+                    <!-- Button to show online users -->
+                    <button id="onlineUsersBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center">
+                        <i class="fas fa-users mr-2"></i>
+                        Online: <span id="onlineUsersCount">0</span>
+                    </button>
+                    <!-- Display for the current user's name -->
+                    <div id="usernameDisplay" class="text-lg text-purple-300"></div>
+                </div>
+            </div>
+
+            <!-- Username Input Overlay (initially visible if no username is set) -->
+            <div id="usernameOverlay" class="online-users-overlay hidden">
+                <div class="online-users-list flex flex-col items-center">
+                    <h2 class="text-2xl font-semibold mb-4 text-purple-400">Enter Your Name</h2>
+                    <input type="text" id="usernameInput" placeholder="Your Name" class="p-3 mb-4 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 w-full max-w-sm" />
+                    <button id="startChatBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition duration-300 ease-in-out w-full max-w-sm">
+                        Start Chatting
+                    </button>
+                </div>
+            </div>
+
+            <!-- Online Users List Overlay (hidden by default, shown when button clicked) -->
+            <div id="onlineUsersOverlay" class="online-users-overlay hidden">
+                <div class="online-users-list relative">
+                    <button id="closeOnlineUsersBtn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl">&times;</button>
+                    <h2 class="text-2xl font-semibold mb-4 text-purple-400">Online Users</h2>
+                    <ul id="onlineUsersList" class="space-y-2 text-lg">
+                        <!-- Online users will be dynamically listed here by JavaScript -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Chat Messages Display Area -->
+            <div id="chatMessages" class="flex-grow chat-container p-4 space-y-4 mb-4 rounded-lg bg-gray-900 bg-opacity-70">
+                <!-- Initial welcome message, replaced by actual chats -->
+                <div class="text-center text-gray-500">Welcome to Archat! Enter your name to start chatting.</div>
+            </div>
+
+            <!-- Message Input Section -->
+            <div class="flex items-center space-x-3 pt-4 border-t border-gray-700">
+                <input type="text" id="messageInput" placeholder="Type your message..." class="flex-grow p-3 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                
+                <!-- Emoji Picker Button (placeholder for future functionality) -->
+                <button id="emojiPickerBtn" class="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-lg shadow-md transition duration-300 ease-in-out">
+                    <i class="far fa-smile"></i>
+                </button>
+                
+                <!-- File Input Button (placeholder for future functionality and crucial explanation) -->
+                <input type="file" id="fileInput" class="hidden" />
+                <label for="fileInput" class="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-lg shadow-md cursor-pointer transition duration-300 ease-in-out">
+                    <i class="fas fa-paperclip"></i>
+                </label>
+
+                <!-- Send Message Button -->
+                <button id="sendMessageBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold p-3 rounded-lg shadow-md transition duration-300 ease-in-out">
+                    <i class="fas fa-paper-plane"></i> Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Global Variables for user session ---
+        // Retrieve username from local storage or set empty
+        let userName = localStorage.getItem('chatUserName') || '';
+        // Retrieve unique user ID from local storage or generate a new one
+        let userId = localStorage.getItem('chatUserId');
+        if (!userId) {
+            userId = crypto.randomUUID(); // Generates a unique ID for the browser session
+            localStorage.setItem('chatUserId', userId);
+        }
+
+        // --- DOM Element References ---
+        const usernameOverlay = document.getElementById('usernameOverlay');
+        const usernameInput = document.getElementById('usernameInput');
+        const startChatBtn = document.getElementById('startChatBtn');
+        const usernameDisplay = document.getElementById('usernameDisplay');
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendMessageBtn = document.getElementById('sendMessageBtn');
+        const onlineUsersBtn = document.getElementById('onlineUsersBtn');
+        const onlineUsersCount = document.getElementById('onlineUsersCount');
+        const onlineUsersOverlay = document.getElementById('onlineUsersOverlay');
+        const onlineUsersList = document.getElementById('onlineUsersList');
+        const closeOnlineUsersBtn = document.getElementById('closeOnlineUsersBtn');
+        const emojiPickerBtn = document.getElementById('emojiPickerBtn');
+        const fileInput = document.getElementById('fileInput');
+
+        // --- API Endpoint Constants (referencing Netlify Functions) ---
+        const API_BASE = '/.netlify/functions/';
+        const GET_MESSAGES_ENDPOINT = API_BASE + 'get-messages';
+        const SEND_MESSAGE_ENDPOINT = API_BASE + 'send-message';
+        const HEARTBEAT_ENDPOINT = API_BASE + 'heartbeat';
+        const GET_ONLINE_USERS_ENDPOINT = API_BASE + 'get-online-users';
+        const DELETE_MESSAGE_ENDPOINT = API_BASE + 'delete-message';
+        const ADD_REACTION_ENDPOINT = API_BASE + 'add-reaction';
+
+        // --- Core Functions ---
+
+        /**
+         * Renders a single chat message element and appends it to the chat display.
+         * Handles styling for own messages vs. others, and includes delete/reaction features.
+         * @param {Object} message - The message object from the backend.
+         * @param {boolean} isNew - True if the message is newly added, to scroll into view.
+         */
+        function renderMessage(message, isNew = false) {
+            const messageElement = document.createElement('div');
+            messageElement.id = `msg-${message.id}`; // Unique ID for updating/deleting specific messages
+            messageElement.classList.add('flex', 'flex-col', 'p-3', 'rounded-lg', 'break-words', 'relative');
+
+            const isOwnMessage = message.userId === userId;
+
+            // Apply specific styles based on whether it's the user's own message
+            if (isOwnMessage) {
+                messageElement.classList.add('bg-purple-700', 'self-end', 'rounded-br-none', 'max-w-[75%]', 'ml-auto');
+            } else {
+                messageElement.classList.add('bg-gray-700', 'self-start', 'rounded-bl-none', 'max-w-[75%]', 'mr-auto');
+            }
+
+            // Message Header (Username and Timestamp)
+            const header = document.createElement('div');
+            header.classList.add('flex', 'items-center', 'justify-between', 'mb-1');
+            const usernameSpan = document.createElement('span');
+            usernameSpan.classList.add('font-semibold', isOwnMessage ? 'text-white' : 'text-purple-300');
+            usernameSpan.textContent = message.userName;
+            header.appendChild(usernameSpan);
+
+            const timestampSpan = document.createElement('span');
+            timestampSpan.classList.add('text-xs', 'text-gray-400', isOwnMessage ? 'ml-2' : 'mr-2');
+            const date = new Date(message.timestamp);
+            timestampSpan.textContent = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Format time
+            header.appendChild(timestampSpan);
+            
+            messageElement.appendChild(header);
+
+            // Message Content (Text)
+            const content = document.createElement('div');
+            content.classList.add('text-white', 'text-lg', 'mb-2');
+            content.textContent = message.text; // Display the message text
+            messageElement.appendChild(content);
+
+            // Reactions Display Area
+            const reactionsContainer = document.createElement('div');
+            reactionsContainer.classList.add('flex', 'flex-wrap', 'gap-1', 'mt-2');
+            if (message.reactions) {
+                // Iterate through existing reactions and display them
+                for (const emoji in message.reactions) {
+                    const reactionCount = message.reactions[emoji];
+                    if (reactionCount > 0) {
+                        const reactionSpan = document.createElement('span');
+                        reactionSpan.classList.add('bg-gray-600', 'text-white', 'text-sm', 'px-2', 'py-1', 'rounded-full', 'cursor-pointer', 'hover:bg-gray-500', 'transition', 'duration-200');
+                        reactionSpan.textContent = `${emoji} ${reactionCount}`;
+                        // Allow users to click on an existing reaction to add their own
+                        reactionSpan.addEventListener('click', () => addReaction(message.id, emoji));
+                        reactionsContainer.appendChild(reactionSpan);
+                    }
+                }
+            }
+            messageElement.appendChild(reactionsContainer);
+
+            // Reaction Buttons (for users to add new reactions)
+            const reactionButtons = document.createElement('div');
+            reactionButtons.classList.add('flex', 'gap-2', 'mt-1');
+            const availableReactions = ['👍', '❤️', '😂', '🔥']; // Common reaction emojis
+            availableReactions.forEach(emoji => {
+                const button = document.createElement('button');
+                button.classList.add('text-lg', 'hover:scale-110', 'transition', 'duration-150');
+                button.textContent = emoji;
+                button.title = `React with ${emoji}`;
+                button.addEventListener('click', () => addReaction(message.id, emoji));
+                reactionButtons.appendChild(button);
+            });
+            messageElement.appendChild(reactionButtons);
+
+
+            // Delete Button (only visible for the user's own messages)
+            if (isOwnMessage) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.classList.add('absolute', 'top-1', 'right-1', 'text-gray-400', 'hover:text-red-500', 'transition', 'duration-200', 'text-xl');
+                deleteBtn.innerHTML = '&times;'; // 'x' icon for deletion
+                deleteBtn.title = 'Delete message';
+                // Attach event listener to delete the message
+                deleteBtn.addEventListener('click', () => deleteMessage(message.id));
+                messageElement.appendChild(deleteBtn);
+            }
+
+            chatMessages.appendChild(messageElement);
+
+            // Scroll to the bottom if it's a new message
+            if (isNew) {
+                chatMessages.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+        }
+
+        /**
+         * Fetches all chat messages from the Netlify Function and updates the UI.
+         * This function is called periodically to simulate real-time updates.
+         */
+        async function fetchMessages() {
+            try {
+                const response = await fetch(GET_MESSAGES_ENDPOINT);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                const messages = data.messages || [];
+
+                // Clear current messages and re-render all to ensure display is up-to-date
+                // This handles deletions and reaction updates efficiently for polling.
+                chatMessages.innerHTML = '';
+                if (messages.length === 0) {
+                    chatMessages.innerHTML = '<div class="text-center text-gray-500">No messages yet. Be the first to say something!</div>';
+                } else {
+                    messages.forEach(msg => renderMessage(msg));
+                }
+                chatMessages.scrollTop = chatMessages.scrollHeight; // Always scroll to the latest message
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+                // Display user-friendly error if messages fail to load
+                if (chatMessages.innerHTML === '') {
+                    chatMessages.innerHTML = '<div class="text-center text-red-400">Failed to load messages. Please try again later.</div>';
+                }
+            }
+        }
+
+        /**
+         * Sends a new chat message to the Netlify Function backend.
+         */
+        async function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text || !userName) {
+                // Prevent sending empty messages or if username isn't set
+                return;
+            }
+
+            // Construct the message object
+            const message = {
+                id: crypto.randomUUID(), // Client-generated unique ID for the message
+                userId: userId,         // User's unique session ID
+                userName: userName,     // User's display name
+                text: text,             // The message content
+                timestamp: new Date().toISOString(), // ISO string for consistent time across clients
+                reactions: {}           // Initialize with no reactions
+            };
+
+            try {
+                const response = await fetch(SEND_MESSAGE_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(message) // Send message data as JSON
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                messageInput.value = ''; // Clear input field after sending
+                // The polling mechanism (fetchMessages) will update the UI,
+                // so no need to immediately render here for eventual consistency.
+            } catch (error) {
+                console.error('Error sending message:', error);
+                // Use a custom modal or toast notification instead of alert in a real app
+                alert('Failed to send message. Please try again.');
+            }
+        }
+
+        /**
+         * Sends a heartbeat signal to the backend to update the user's online status.
+         * Called periodically.
+         */
+        async function sendHeartbeat() {
+            if (!userName) return; // Only send heartbeat if user is identified
+            try {
+                await fetch(HEARTBEAT_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: userId, userName: userName, timestamp: new Date().toISOString() })
+                });
+            } catch (error) {
+                console.warn('Failed to send heartbeat:', error); // Log warnings for network issues
+            }
+        }
+
+        /**
+         * Fetches the list of online users from the Netlify Function and updates the UI.
+         * Called periodically.
+         */
+        async function fetchOnlineUsers() {
+            try {
+                const response = await fetch(GET_ONLINE_USERS_ENDPOINT);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                const onlineUsers = data.onlineUsers || [];
+
+                onlineUsersCount.textContent = onlineUsers.length; // Update online count in header
+                onlineUsersList.innerHTML = ''; // Clear previous list
+                if (onlineUsers.length === 0) {
+                    onlineUsersList.innerHTML = '<li class="text-gray-400">No one else is online right now.</li>';
+                } else {
+                    onlineUsers.forEach(user => {
+                        const li = document.createElement('li');
+                        li.textContent = user.userName;
+                        if (user.userId === userId) {
+                            li.classList.add('text-purple-300', 'font-bold');
+                            li.textContent += ' (You)'; // Mark current user in the list
+                        }
+                        onlineUsersList.appendChild(li);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching online users:', error);
+                onlineUsersCount.textContent = 'Error';
+                onlineUsersList.innerHTML = '<li class="text-red-400">Failed to load online users.</li>';
+            }
+        }
+
+        /**
+         * Sends a request to the backend to delete a specific message.
+         * @param {string} messageId - The ID of the message to be deleted.
+         */
+        async function deleteMessage(messageId) {
+            // Confirm deletion with the user (replace with a custom modal in production)
+            if (!confirm("Are you sure you want to delete this message? This action cannot be undone.")) {
+                return;
+            }
+
+            try {
+                const response = await fetch(DELETE_MESSAGE_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messageId: messageId, userId: userId }) // Send message ID and user ID for authorization
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`HTTP error! status: ${response.status} - ${errorData.error}`);
+                }
+                // Re-fetch messages to reflect the deletion
+                fetchMessages();
+            } catch (error) {
+                console.error('Error deleting message:', error);
+                // Inform user about deletion failure
+                alert('Failed to delete message. ' + error.message);
+            }
+        }
+
+        /**
+         * Sends a request to the backend to add an emoji reaction to a message.
+         * @param {string} messageId - The ID of the message to react to.
+         * @param {string} emoji - The emoji character to add (e.g., '👍', '❤️').
+         */
+        async function addReaction(messageId, emoji) {
+            try {
+                const response = await fetch(ADD_REACTION_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messageId: messageId, emoji: emoji }) // Send message ID and emoji
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                // Re-fetch messages to show the updated reactions
+                fetchMessages();
+            } catch (error) {
+                console.error('Error adding reaction:', error);
+                alert('Failed to add reaction.');
+            }
+        }
+
+
+        // --- Event Listeners ---
+
+        // Handle username submission
+        startChatBtn.addEventListener('click', () => {
+            const name = usernameInput.value.trim();
+            if (name) {
+                userName = name;
+                localStorage.setItem('chatUserName', userName); // Save username for future visits
+                usernameOverlay.classList.add('hidden'); // Hide the overlay
+                usernameDisplay.textContent = `Hello, ${userName}!`; // Display username in header
+                // Start the polling intervals for messages and online users
+                setInterval(fetchMessages, 3000);   // Fetch messages every 3 seconds
+                setInterval(sendHeartbeat, 10000);  // Send heartbeat every 10 seconds
+                setInterval(fetchOnlineUsers, 15000); // Fetch online users every 15 seconds
+                fetchMessages();    // Initial fetch of messages
+                fetchOnlineUsers(); // Initial fetch of online users
+                sendHeartbeat();    // Initial heartbeat
+            } else {
+                alert('Please enter your name to start chatting!');
+            }
+        });
+
+        // Send message on button click
+        sendMessageBtn.addEventListener('click', sendMessage);
+        // Send message on Enter key press in the input field
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Toggle online users overlay visibility
+        onlineUsersBtn.addEventListener('click', () => {
+            onlineUsersOverlay.classList.remove('hidden');
+            fetchOnlineUsers(); // Refresh the list when opened
+        });
+        closeOnlineUsersBtn.addEventListener('click', () => {
+            onlineUsersOverlay.classList.add('hidden');
+        });
+
+        // Placeholder for emoji picker: For a real app, this would open a complex emoji selector UI.
+        emojiPickerBtn.addEventListener('click', () => {
+            const emojis = ['😊', '😂', '😍', '🤩', '😎', '🎉', '👍', '🙏'];
+            const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+            messageInput.value += randomEmoji; // Append a random emoji to the input
+            messageInput.focus(); // Keep focus on the input
+        });
+
+        // Placeholder for file input: Explain the limitations for file hosting.
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                alert(`File selected: ${file.name}\n\nNote: Full file upload and hosting for images/videos/documents in a global chat is complex and typically requires a dedicated file storage service (e.g., AWS S3, Cloudinary, Imgur, etc.) and not just Netlify Blobs. This demo focuses on text messages and reactions.`);
+                fileInput.value = ''; // Reset file input to allow selecting the same file again
+            }
+        });
+
+        // --- Initial Application Load Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if a username is already stored from a previous session
+            if (userName) {
+                usernameOverlay.classList.add('hidden'); // Hide username input if already set
+                usernameInput.value = userName; // Pre-fill the input field
+                usernameDisplay.textContent = `Hello, ${userName}!`;
+                // Start periodic updates immediately
+                setInterval(fetchMessages, 3000);
+                setInterval(sendHeartbeat, 10000);
+                setInterval(fetchOnlineUsers, 15000);
+                fetchMessages();
+                fetchOnlineUsers();
+                sendHeartbeat();
+            } else {
+                usernameOverlay.classList.remove('hidden'); // Show username input if not set
+            }
+        });
+    </script>
+</body>
+</html>
