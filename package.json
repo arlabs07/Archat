@@ -1,0 +1,16 @@
+{
+  "name": "archat-netlify-functions",
+  "version": "1.0.0",
+  "description": "Dependencies for Netlify Functions used in Archat global chat application.",
+  "main": "index.js",
+  "scripts": {
+    "start": "netlify dev"
+  },
+  "keywords": ["netlify", "functions", "chat", "blobs"],
+  "author": "Your Name/Team",
+  "license": "MIT",
+  "dependencies": {
+    "@netlify/blobs": "^2.1.0"
+  }
+}
+
