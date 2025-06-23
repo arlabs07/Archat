@@ -1,0 +1,19 @@
+# Defines the build settings for your project
+[build]
+  # No specific build command is needed if your index.html is static and functions are pre-compiled
+  # For simple projects, "echo" can be used as a placeholder.
+  command = "echo 'Building Archat Frontend & Functions'"
+  # Specifies the directory where your deployable files are located after a build.
+  # Since index.html is in the root, we can publish from the root directory.
+  publish = "." 
+
+# Configures Netlify Functions
+[functions]
+  # Specifies the directory where your serverless functions are located.
+  directory = "netlify/functions"
+  # Specifies the bundler to use for Node.js functions. esbuild is recommended for performance.
+  node_bundler = "esbuild"
+  # Crucial for Netlify Blobs: Defines the context for your blob store.
+  # Replace "archat_store_production" with a unique name for your application's blob store.
+  # This context name must be consistent across all your functions that use Netlify Blobs.
+  environment = { NETLIFY_BLOBS_CONTEXT = "archat_store_production" }
